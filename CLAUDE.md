@@ -1,0 +1,1 @@
+- Uvijek pročitaj plan @PROJEKTNI-PLAN.md prije rada na tasku
