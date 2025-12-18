@@ -28,9 +28,10 @@ export function HabitForm({ habit, onSubmit, onCancel, customCategories = [] }: 
   const [loading, setLoading] = useState(false)
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCategory, setNewCategory] = useState('')
+  const [addedCategories, setAddedCategories] = useState<string[]>([])
 
-  // Combine default and custom categories
-  const allCategories = [...new Set([...DEFAULT_CATEGORIES, ...customCategories])]
+  // Combine default, custom, and newly added categories
+  const allCategories = [...new Set([...DEFAULT_CATEGORIES, ...customCategories, ...addedCategories])]
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -42,8 +43,10 @@ export function HabitForm({ habit, onSubmit, onCancel, customCategories = [] }: 
   }
 
   const handleAddCategory = () => {
-    if (newCategory.trim() && !allCategories.includes(newCategory.trim())) {
-      setCategory(newCategory.trim())
+    const trimmed = newCategory.trim()
+    if (trimmed && !allCategories.includes(trimmed)) {
+      setAddedCategories(prev => [...prev, trimmed])
+      setCategory(trimmed)
       setShowNewCategory(false)
       setNewCategory('')
     }
