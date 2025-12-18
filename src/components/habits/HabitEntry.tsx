@@ -49,15 +49,21 @@ export function HabitEntry({ habit, onToggle, streak }: HabitEntryProps) {
 
       {/* Habit Info */}
       <div className="flex-1 text-left">
-        <h3
-          className={`font-semibold transition-all ${
-            isCompleted
-              ? 'text-gray-400 dark:text-gray-500'
-              : 'text-gray-900 dark:text-white'
-          }`}
-        >
-          {habit.title}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3
+            className={`font-semibold transition-all ${
+              isCompleted
+                ? 'text-gray-400 dark:text-gray-500'
+                : 'text-gray-900 dark:text-white'
+            }`}
+          >
+            {habit.title}
+          </h3>
+          {/* Category Badge */}
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+            {habit.category || 'Ostalo'}
+          </span>
+        </div>
         {habit.description && (
           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
             {habit.description}

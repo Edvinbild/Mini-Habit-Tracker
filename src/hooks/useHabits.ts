@@ -99,7 +99,7 @@ export function useHabits() {
   }, [user, today])
 
   // Create a new habit
-  const createHabit = async (title: string, description?: string, color?: string) => {
+  const createHabit = async (title: string, description?: string, color?: string, category?: string) => {
     if (!user) return { error: new Error('Not authenticated') }
 
     try {
@@ -109,7 +109,8 @@ export function useHabits() {
           user_id: user.id,
           title,
           description: description || null,
-          color: color || '#6366f1'
+          color: color || '#6366f1',
+          category: category || 'Ostalo'
         })
         .select()
         .single()
@@ -121,6 +122,12 @@ export function useHabits() {
     } catch (err) {
       return { data: null, error: err as Error }
     }
+  }
+
+  // Get unique categories from habits
+  const getCategories = (): string[] => {
+    const categories = habits.map(h => h.category || 'Ostalo')
+    return [...new Set(categories)].sort()
   }
 
   // Update a habit
@@ -339,6 +346,7 @@ export function useHabits() {
     toggleEntry,
     toggleEntryForDate,
     getStreak,
-    getStats
+    getStats,
+    getCategories
   }
 }

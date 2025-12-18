@@ -12,9 +12,22 @@ export interface Habit {
   title: string;
   description: string | null;
   color: string;
+  category: string;
   created_at: string;
   updated_at: string;
 }
+
+// Predložene kategorije
+export const DEFAULT_CATEGORIES = [
+  'Zdravlje',
+  'Produktivnost',
+  'Učenje',
+  'Fitness',
+  'Mindfulness',
+  'Ostalo'
+] as const;
+
+export type CategoryType = typeof DEFAULT_CATEGORIES[number] | string;
 
 // HabitEntry tip (dnevni unos)
 export interface HabitEntry {

@@ -6,18 +6,27 @@ import { HabitEntry } from '../components/habits/HabitEntry'
 import { HabitForm } from '../components/habits/HabitForm'
 import { CalendarHeatmap } from '../components/habits/CalendarHeatmap'
 import { DayModal } from '../components/habits/DayModal'
+import { CategoryFilter } from '../components/habits/CategoryFilter'
 import { ThemeToggle } from '../components/layout/ThemeToggle'
 import { HabitWithEntry } from '../types'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
-  const { habits, allEntries, loading, createHabit, updateHabit, deleteHabit, toggleEntry, toggleEntryForDate, getStats } = useHabits()
+  const { habits, allEntries, loading, createHabit, updateHabit, deleteHabit, toggleEntry, toggleEntryForDate, getStats, getCategories } = useHabits()
 
   const [showForm, setShowForm] = useState(false)
   const [editingHabit, setEditingHabit] = useState<HabitWithEntry | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+
+  // Filter habits by selected category
+  const filteredHabits = selectedCategory
+    ? habits.filter(h => (h.category || 'Ostalo') === selectedCategory)
+    : habits
+
+  const categories = getCategories()
 
   const today = new Date().toLocaleDateString('hr-HR', {
     weekday: 'long',
@@ -28,14 +37,14 @@ export function Dashboard() {
 
   const stats = getStats()
 
-  const handleCreateHabit = async (title: string, description?: string, color?: string) => {
-    await createHabit(title, description, color)
+  const handleCreateHabit = async (title: string, description?: string, color?: string, category?: string) => {
+    await createHabit(title, description, color, category)
     setShowForm(false)
   }
 
-  const handleUpdateHabit = async (title: string, description?: string, color?: string) => {
+  const handleUpdateHabit = async (title: string, description?: string, color?: string, category?: string) => {
     if (!editingHabit) return
-    await updateHabit(editingHabit.id, { title, description: description || null, color })
+    await updateHabit(editingHabit.id, { title, description: description || null, color, category: category || 'Ostalo' })
     setEditingHabit(null)
   }
 
@@ -100,6 +109,17 @@ export function Dashboard() {
           )}
         </div>
 
+        {/* Category Filter */}
+        {habits.length > 0 && !loading && (
+          <div className="mb-4">
+            <CategoryFilter
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+            />
+          </div>
+        )}
+
         {!showForm && !editingHabit && (
           <button onClick={() => setShowForm(true)} className="w-full mb-6 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-indigo-500 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -110,14 +130,14 @@ export function Dashboard() {
         {showForm && (
           <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Habit</h2>
-            <HabitForm onSubmit={handleCreateHabit} onCancel={() => setShowForm(false)} />
+            <HabitForm onSubmit={handleCreateHabit} onCancel={() => setShowForm(false)} customCategories={categories} />
           </div>
         )}
 
         {editingHabit && (
           <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Edit Habit</h2>
-            <HabitForm habit={editingHabit} onSubmit={handleUpdateHabit} onCancel={() => setEditingHabit(null)} />
+            <HabitForm habit={editingHabit} onSubmit={handleUpdateHabit} onCancel={() => setEditingHabit(null)} customCategories={categories} />
           </div>
         )}
 
@@ -133,7 +153,7 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {habits.map((habit) => (
+            {filteredHabits.map((habit) => (
               <div key={habit.id} className="relative group">
                 <HabitEntry habit={habit} onToggle={() => toggleEntry(habit.id)} streak={habit.streak} />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
