@@ -3,16 +3,20 @@ import { useAuth } from '../context/AuthContext'
 import { useHabits } from '../hooks/useHabits'
 import { HabitEntry } from '../components/habits/HabitEntry'
 import { HabitForm } from '../components/habits/HabitForm'
+import { CalendarHeatmap } from '../components/habits/CalendarHeatmap'
+import { DayModal } from '../components/habits/DayModal'
 import { ThemeToggle } from '../components/layout/ThemeToggle'
 import { HabitWithEntry } from '../types'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
-  const { habits, loading, createHabit, updateHabit, deleteHabit, toggleEntry, getStats } = useHabits()
+  const { habits, allEntries, loading, createHabit, updateHabit, deleteHabit, toggleEntry, toggleEntryForDate, getStats } = useHabits()
 
   const [showForm, setShowForm] = useState(false)
   const [editingHabit, setEditingHabit] = useState<HabitWithEntry | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [showCalendar, setShowCalendar] = useState(false)
 
   const today = new Date().toLocaleDateString('hr-HR', {
     weekday: 'long',
@@ -53,13 +57,35 @@ export function Dashboard() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         <div className="mb-6">
-          <p className="text-gray-600 dark:text-gray-400 capitalize">{today}</p>
+          <button
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="capitalize">{today}</span>
+            <svg className={`w-4 h-4 transition-transform ${showCalendar ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           {habits.length > 0 && (
             <div className="mt-2 flex items-center gap-2">
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 w-32">
                 <div className="bg-indigo-600 h-2 rounded-full transition-all" style={{ width: `${stats.percentage}%` }} />
               </div>
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{stats.completed}/{stats.total}</span>
+            </div>
+          )}
+
+          {/* Calendar Heatmap - appears below date when toggled */}
+          {showCalendar && habits.length > 0 && !loading && (
+            <div className="mt-4">
+              <CalendarHeatmap
+                entries={allEntries}
+                habits={habits}
+                onDayClick={(date) => setSelectedDate(date)}
+              />
             </div>
           )}
         </div>
@@ -99,7 +125,7 @@ export function Dashboard() {
           <div className="space-y-3">
             {habits.map((habit) => (
               <div key={habit.id} className="relative group">
-                <HabitEntry habit={habit} onToggle={() => toggleEntry(habit.id)} />
+                <HabitEntry habit={habit} onToggle={() => toggleEntry(habit.id)} streak={habit.streak} />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                   <button onClick={() => setEditingHabit(habit)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -111,6 +137,17 @@ export function Dashboard() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Day Modal */}
+        {selectedDate && (
+          <DayModal
+            date={selectedDate}
+            habits={habits}
+            entries={allEntries}
+            onToggle={toggleEntryForDate}
+            onClose={() => setSelectedDate(null)}
+          />
         )}
 
         {showDeleteConfirm && (

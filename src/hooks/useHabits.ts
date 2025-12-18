@@ -1,11 +1,49 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Habit, HabitWithEntry } from '../types'
+import { Habit, HabitEntry, HabitWithEntry } from '../types'
+
+// Helper funkcija za izračun streak-a
+function calculateStreak(habitId: string, entries: HabitEntry[]): number {
+  const habitEntries = entries
+    .filter(e => e.habit_id === habitId && e.completed)
+    .map(e => e.date)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+
+  if (habitEntries.length === 0) return 0
+
+  let streak = 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (let i = 0; i < habitEntries.length; i++) {
+    const expectedDate = new Date(today)
+    expectedDate.setDate(expectedDate.getDate() - streak)
+    const entryDate = new Date(habitEntries[i])
+    entryDate.setHours(0, 0, 0, 0)
+
+    if (entryDate.getTime() === expectedDate.getTime()) {
+      streak++
+    } else if (streak === 0) {
+      // Provjeri je li jučer ako danas nije označen
+      expectedDate.setDate(expectedDate.getDate() - 1)
+      if (entryDate.getTime() === expectedDate.getTime()) {
+        streak++
+      } else {
+        break
+      }
+    } else {
+      break
+    }
+  }
+
+  return streak
+}
 
 export function useHabits() {
   const { user } = useAuth()
   const [habits, setHabits] = useState<HabitWithEntry[]>([])
+  const [allEntries, setAllEntries] = useState<HabitEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,19 +66,28 @@ export function useHabits() {
 
       if (habitsError) throw habitsError
 
-      // Fetch today's entries
+      // Fetch all entries for streak calculation (last 365 days)
+      const yearAgo = new Date()
+      yearAgo.setFullYear(yearAgo.getFullYear() - 1)
+      const yearAgoStr = yearAgo.toISOString().split('T')[0]
+
       const { data: entriesData, error: entriesError } = await supabase
         .from('habit_entries')
         .select('*')
-        .eq('date', today)
         .in('habit_id', habitsData?.map(h => h.id) || [])
+        .gte('date', yearAgoStr)
+        .order('date', { ascending: false })
 
       if (entriesError) throw entriesError
 
-      // Combine habits with entries
+      // Store all entries for calendar
+      setAllEntries(entriesData || [])
+
+      // Combine habits with entries and calculate streak
       const habitsWithEntries: HabitWithEntry[] = (habitsData || []).map(habit => ({
         ...habit,
-        todayEntry: entriesData?.find(e => e.habit_id === habit.id)
+        todayEntry: entriesData?.find(e => e.habit_id === habit.id && e.date === today),
+        streak: calculateStreak(habit.id, entriesData || [])
       }))
 
       setHabits(habitsWithEntries)
@@ -158,6 +205,71 @@ export function useHabits() {
     }
   }
 
+  // Toggle entry for any date (for calendar)
+  const toggleEntryForDate = async (habitId: string, date: string, completed: boolean) => {
+    try {
+      // Check if entry exists for this date
+      const existingEntry = allEntries.find(e => e.habit_id === habitId && e.date === date)
+
+      if (existingEntry) {
+        // Update existing entry
+        const { data, error } = await supabase
+          .from('habit_entries')
+          .update({ completed })
+          .eq('id', existingEntry.id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Update allEntries state
+        setAllEntries(prev => prev.map(e =>
+          e.id === existingEntry.id ? data : e
+        ))
+
+        // If it's today, also update habits state
+        if (date === today) {
+          setHabits(prev => prev.map(h =>
+            h.id === habitId ? { ...h, todayEntry: data } : h
+          ))
+        }
+      } else {
+        // Create new entry
+        const { data, error } = await supabase
+          .from('habit_entries')
+          .insert({
+            habit_id: habitId,
+            date,
+            completed
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Add to allEntries state
+        setAllEntries(prev => [...prev, data])
+
+        // If it's today, also update habits state
+        if (date === today) {
+          setHabits(prev => prev.map(h =>
+            h.id === habitId ? { ...h, todayEntry: data } : h
+          ))
+        }
+      }
+
+      // Recalculate streaks after entry change
+      setHabits(prev => prev.map(habit => ({
+        ...habit,
+        streak: calculateStreak(habit.id, allEntries)
+      })))
+
+      return { error: null }
+    } catch (err) {
+      return { error: err as Error }
+    }
+  }
+
   // Calculate streak for a habit
   const getStreak = async (habitId: string): Promise<number> => {
     try {
@@ -217,6 +329,7 @@ export function useHabits() {
 
   return {
     habits,
+    allEntries,
     loading,
     error,
     fetchHabits,
@@ -224,6 +337,7 @@ export function useHabits() {
     updateHabit,
     deleteHabit,
     toggleEntry,
+    toggleEntryForDate,
     getStreak,
     getStats
   }
