@@ -68,6 +68,8 @@ export function DayModal({ date, habits, entries, onToggle, onClose }: DayModalP
           ) : (
             habits.map(habit => {
               const completed = isCompleted(habit.id)
+              const entry = getEntryForHabit(habit.id)
+              const hasNote = entry?.note
 
               return (
                 <button
@@ -112,6 +114,15 @@ export function DayModal({ date, habits, entries, onToggle, onClose }: DayModalP
                     >
                       {habit.title}
                     </span>
+                    {/* Note preview */}
+                    {hasNote && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5 flex items-center gap-1">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {entry.note}
+                      </p>
+                    )}
                   </div>
 
                   {/* Status indicator */}

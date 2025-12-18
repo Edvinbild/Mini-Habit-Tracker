@@ -37,6 +37,11 @@ export function CalendarHeatmap({ entries, habits, onDayClick }: CalendarHeatmap
     return Math.round((completedCount / habits.length) * 100)
   }
 
+  // Check if any entry on this date has a note
+  const hasNoteOnDate = (dateStr: string): boolean => {
+    return entries.some(e => e.date === dateStr && e.note && e.note.trim().length > 0)
+  }
+
   // Get background color class based on completion percentage
   const getColorClass = (dateStr: string): string => {
     if (isFutureDate(dateStr)) {
@@ -141,6 +146,8 @@ export function CalendarHeatmap({ entries, habits, onDayClick }: CalendarHeatmap
           const isFuture = isFutureDate(dateStr)
           const percentage = getCompletionPercentage(dateStr)
 
+          const hasNote = hasNoteOnDate(dateStr)
+
           return (
             <button
               key={dateStr}
@@ -148,15 +155,25 @@ export function CalendarHeatmap({ entries, habits, onDayClick }: CalendarHeatmap
               disabled={isFuture}
               className={`
                 aspect-square rounded-md flex items-center justify-center text-xs font-medium
-                transition-all duration-150
+                transition-all duration-150 relative
                 ${getColorClass(dateStr)}
                 ${isTodayDate ? 'ring-2 ring-indigo-500' : ''}
                 ${percentage > 50 ? 'text-white' : 'text-gray-700 dark:text-gray-300'}
                 ${isFuture ? 'text-gray-300 dark:text-gray-600' : ''}
               `}
-              title={`${dateStr}: ${percentage}% completed`}
+              title={`${dateStr}: ${percentage}% completed${hasNote ? ' • ima bilješku' : ''}`}
             >
               {date.getDate()}
+              {/* Note indicator */}
+              {hasNote && (
+                <svg
+                  className="absolute top-0.5 right-0.5 w-2.5 h-2.5 text-amber-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              )}
             </button>
           )
         })}

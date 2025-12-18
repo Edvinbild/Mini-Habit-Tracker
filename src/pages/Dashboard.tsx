@@ -6,13 +6,14 @@ import { HabitEntry } from '../components/habits/HabitEntry'
 import { HabitForm } from '../components/habits/HabitForm'
 import { CalendarHeatmap } from '../components/habits/CalendarHeatmap'
 import { DayModal } from '../components/habits/DayModal'
+import { EntryNotesModal } from '../components/habits/EntryNotesModal'
 import { CategoryFilter } from '../components/habits/CategoryFilter'
 import { ThemeToggle } from '../components/layout/ThemeToggle'
 import { HabitWithEntry } from '../types'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
-  const { habits, allEntries, loading, createHabit, updateHabit, deleteHabit, toggleEntry, toggleEntryForDate, getStats, getCategories } = useHabits()
+  const { habits, allEntries, loading, createHabit, updateHabit, deleteHabit, toggleEntry, toggleEntryForDate, updateEntryNote, getStats, getCategories } = useHabits()
 
   const [showForm, setShowForm] = useState(false)
   const [editingHabit, setEditingHabit] = useState<HabitWithEntry | null>(null)
@@ -20,6 +21,7 @@ export function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [notesModalHabit, setNotesModalHabit] = useState<HabitWithEntry | null>(null)
 
   // Filter habits by selected category
   const filteredHabits = selectedCategory
@@ -51,6 +53,12 @@ export function Dashboard() {
   const handleDeleteHabit = async (id: string) => {
     await deleteHabit(id)
     setShowDeleteConfirm(null)
+  }
+
+  const handleSaveNote = async (note: string | null) => {
+    if (!notesModalHabit) return
+    const todayStr = new Date().toISOString().split('T')[0]
+    await updateEntryNote(notesModalHabit.id, todayStr, note)
   }
 
   return (
@@ -154,17 +162,15 @@ export function Dashboard() {
         ) : (
           <div className="space-y-3">
             {filteredHabits.map((habit) => (
-              <div key={habit.id} className="relative group">
-                <HabitEntry habit={habit} onToggle={() => toggleEntry(habit.id)} streak={habit.streak} />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <button onClick={() => setEditingHabit(habit)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                  </button>
-                  <button onClick={() => setShowDeleteConfirm(habit.id)} className="p-2 text-gray-400 hover:text-red-500 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
-              </div>
+              <HabitEntry
+                key={habit.id}
+                habit={habit}
+                onToggle={() => toggleEntry(habit.id)}
+                onNotesClick={() => setNotesModalHabit(habit)}
+                onEdit={() => setEditingHabit(habit)}
+                onDelete={() => setShowDeleteConfirm(habit.id)}
+                streak={habit.streak}
+              />
             ))}
           </div>
         )}
@@ -177,6 +183,17 @@ export function Dashboard() {
             entries={allEntries}
             onToggle={toggleEntryForDate}
             onClose={() => setSelectedDate(null)}
+          />
+        )}
+
+        {/* Notes Modal */}
+        {notesModalHabit && (
+          <EntryNotesModal
+            habit={notesModalHabit}
+            date={new Date().toISOString().split('T')[0]}
+            currentNote={notesModalHabit.todayEntry?.note || null}
+            onSave={handleSaveNote}
+            onClose={() => setNotesModalHabit(null)}
           />
         )}
 

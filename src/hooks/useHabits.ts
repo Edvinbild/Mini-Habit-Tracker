@@ -277,6 +277,66 @@ export function useHabits() {
     }
   }
 
+  // Update note for an entry
+  const updateEntryNote = async (habitId: string, date: string, note: string | null) => {
+    try {
+      // Check if entry exists for this date
+      const existingEntry = allEntries.find(e => e.habit_id === habitId && e.date === date)
+
+      if (existingEntry) {
+        // Update existing entry's note
+        const { data, error } = await supabase
+          .from('habit_entries')
+          .update({ note })
+          .eq('id', existingEntry.id)
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Update allEntries state
+        setAllEntries(prev => prev.map(e =>
+          e.id === existingEntry.id ? data : e
+        ))
+
+        // If it's today, also update habits state
+        if (date === today) {
+          setHabits(prev => prev.map(h =>
+            h.id === habitId ? { ...h, todayEntry: data } : h
+          ))
+        }
+      } else {
+        // Create new entry with note (completed = false)
+        const { data, error } = await supabase
+          .from('habit_entries')
+          .insert({
+            habit_id: habitId,
+            date,
+            completed: false,
+            note
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Add to allEntries state
+        setAllEntries(prev => [...prev, data])
+
+        // If it's today, also update habits state
+        if (date === today) {
+          setHabits(prev => prev.map(h =>
+            h.id === habitId ? { ...h, todayEntry: data } : h
+          ))
+        }
+      }
+
+      return { error: null }
+    } catch (err) {
+      return { error: err as Error }
+    }
+  }
+
   // Calculate streak for a habit
   const getStreak = async (habitId: string): Promise<number> => {
     try {
@@ -345,6 +405,7 @@ export function useHabits() {
     deleteHabit,
     toggleEntry,
     toggleEntryForDate,
+    updateEntryNote,
     getStreak,
     getStats,
     getCategories

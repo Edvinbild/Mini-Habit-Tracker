@@ -35,6 +35,7 @@ export interface HabitEntry {
   habit_id: string;
   date: string;
   completed: boolean;
+  note: string | null;
   created_at: string;
 }
 
